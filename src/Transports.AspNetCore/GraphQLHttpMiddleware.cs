@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -8,6 +10,7 @@ using GraphQL.Server.Internal;
 using GraphQL.Server.Transports.AspNetCore.Common;
 using GraphQL.Types;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -60,6 +63,9 @@ namespace GraphQL.Server.Transports.AspNetCore
 
                 switch (mediaTypeHeader.MediaType)
                 {
+                    case "multipart/form-data":
+                        gqlRequest = await ReadMultiPart(context, httpRequest.Body);
+                        break;
                     case JsonContentType:
                         gqlRequest = Deserialize<GraphQLRequest>(httpRequest.Body);
                         break;
@@ -96,6 +102,8 @@ namespace GraphQL.Server.Transports.AspNetCore
 
             await WriteResponseAsync(context, writer, result);
         }
+
+
 
         private Task WriteBadRequestResponseAsync(HttpContext context, IDocumentWriter writer, string errorMessage)
         {
@@ -140,6 +148,28 @@ namespace GraphQL.Server.Transports.AspNetCore
             {
                 return await reader.ReadToEndAsync();
             }
+        }
+
+        private async Task<GraphQLRequest> ReadMultiPart(HttpContext context, Stream body)
+        {
+            var headerValue = MediaTypeHeaderValue.Parse(context.Request.ContentType);
+
+            var boundary = headerValue.Parameters.First().Value;
+            var multiPartReader = new MultipartReader(boundary, body);
+            var section = await multiPartReader.ReadNextSectionAsync();
+            var sectionBody = await section.ReadAsStringAsync();
+
+            GraphQLRequest request = JsonConvert.DeserializeObject<GraphQLRequest>(sectionBody);
+
+            section = await multiPartReader.ReadNextSectionAsync();
+
+            using (var ms = new MemoryStream())
+            {
+                section.Body.CopyTo(ms);
+                request.Files = new List<Byte[]>() { ms.ToArray() };
+            }
+
+            return request;
         }
 
         private static void ExtractGraphQLRequestFromQueryString(IQueryCollection qs, GraphQLRequest gqlRequest)

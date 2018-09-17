@@ -1,5 +1,6 @@
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using System.Collections.Generic;
 
 namespace GraphQL.Server.Transports.AspNetCore.Common
 {
@@ -20,12 +21,17 @@ namespace GraphQL.Server.Transports.AspNetCore.Common
 
         public Inputs GetInputs()
         {
-            return GetInputs(Variables);
+            return GetInputs(Variables, Files);
         }
 
-        public static Inputs GetInputs(JObject variables)
+        public static Inputs GetInputs(JObject variables, IEnumerable<byte[]> files)
         {
-            return variables?.ToInputs();
+            Inputs inputs = variables?.ToInputs();
+            inputs.Add("files", files);
+
+            return inputs;
         }
+
+        public IEnumerable<byte[]> Files { get; set; }
     }
 }
