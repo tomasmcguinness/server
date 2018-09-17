@@ -15,6 +15,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using GraphQL.Server.Transports.AspNetCore;
 
 namespace GraphQL.Server.Transports.AspNetCore
 {
@@ -166,7 +167,7 @@ namespace GraphQL.Server.Transports.AspNetCore
             using (var ms = new MemoryStream())
             {
                 section.Body.CopyTo(ms);
-                request.Files = new List<string>() { Convert.ToBase64String(ms.ToArray())  };
+                request.Files = new List<object>() { ms.ToArray() };
             }
 
             return request;

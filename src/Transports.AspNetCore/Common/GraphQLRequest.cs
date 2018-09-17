@@ -25,7 +25,7 @@ namespace GraphQL.Server.Transports.AspNetCore.Common
             return GetInputs(Variables, Files);
         }
 
-        public static Inputs GetInputs(JObject variables, IEnumerable<string> files)
+        public static Inputs GetInputs(JObject variables, IEnumerable<object> files)
         {
             Inputs inputs = variables?.ToInputs();
 
@@ -37,6 +37,6 @@ namespace GraphQL.Server.Transports.AspNetCore.Common
             return inputs;
         }
 
-        public IEnumerable<string> Files { get; set; }
+        public IEnumerable<object> Files { get; set; }
     }
 }
