@@ -166,7 +166,7 @@ namespace GraphQL.Server.Transports.AspNetCore
             using (var ms = new MemoryStream())
             {
                 section.Body.CopyTo(ms);
-                request.Files = new List<Byte[]>() { ms.ToArray() };
+                request.Files = new List<string>() { Convert.ToBase64String(ms.ToArray())  };
             }
 
             return request;
