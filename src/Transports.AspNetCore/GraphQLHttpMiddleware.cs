@@ -1,10 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Net;
-using System.Net.Http.Headers;
-using System.Threading.Tasks;
 using GraphQL.Http;
 using GraphQL.Server.Internal;
 using GraphQL.Server.Transports.AspNetCore.Common;
@@ -15,7 +8,11 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using GraphQL.Server.Transports.AspNetCore;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Net.Http.Headers;
+using System.Threading.Tasks;
 
 namespace GraphQL.Server.Transports.AspNetCore
 {
@@ -157,18 +154,41 @@ namespace GraphQL.Server.Transports.AspNetCore
 
             var boundary = headerValue.Parameters.First().Value;
             var multiPartReader = new MultipartReader(boundary, body);
-            var section = await multiPartReader.ReadNextSectionAsync();
-            var sectionBody = await section.ReadAsStringAsync();
+            var graphSection = await multiPartReader.ReadNextSectionAsync();
+            var graphSectionBody = await graphSection.ReadAsStringAsync();
 
-            GraphQLRequest request = JsonConvert.DeserializeObject<GraphQLRequest>(sectionBody);
+            GraphQLRequest request = JsonConvert.DeserializeObject<GraphQLRequest>(graphSectionBody);
 
-            section = await multiPartReader.ReadNextSectionAsync();
+            var mapSection = await multiPartReader.ReadNextSectionAsync();
+            var mapSectionBody = await mapSection.ReadAsStringAsync();
 
-            using (var ms = new MemoryStream())
+            Dictionary<string, byte[]> mapTargets = new Dictionary<string, byte[]>();
+
+            var map = JObject.Parse(mapSectionBody);
+            foreach (JProperty x in (JToken)map)
             {
-                section.Body.CopyTo(ms);
-                request.Files = new List<object>() { ms.ToArray() };
+
+                JArray valueArray = x.Value as JArray;
+
+                string mapTarget = valueArray[0].Value<string>();
+
+                mapTarget = mapTarget.Replace("variables.", "");
+
+                mapTargets.Add(mapTarget, null);
             }
+
+            foreach (var key in mapTargets.Keys.ToList())
+            {
+                var fileSection = await multiPartReader.ReadNextSectionAsync();
+
+                using (var ms = new MemoryStream())
+                {
+                    fileSection.Body.CopyTo(ms);
+                    mapTargets[key] = ms.ToArray();
+                }
+            }
+
+            request.Files = mapTargets;
 
             return request;
         }

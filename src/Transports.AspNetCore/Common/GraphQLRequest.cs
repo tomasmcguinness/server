@@ -1,7 +1,6 @@
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace GraphQL.Server.Transports.AspNetCore.Common
 {
@@ -25,18 +24,21 @@ namespace GraphQL.Server.Transports.AspNetCore.Common
             return GetInputs(Variables, Files);
         }
 
-        public static Inputs GetInputs(JObject variables, IEnumerable<object> files)
+        public static Inputs GetInputs(JObject variables, IDictionary<string, byte[]> files)
         {
             Inputs inputs = variables?.ToInputs();
 
             if (files != null)
             {
-                inputs["file"] = files.First();
+                foreach (var file in files)
+                {
+                    inputs[file.Key] = file.Value;
+                }
             }
 
             return inputs;
         }
 
-        public IEnumerable<object> Files { get; set; }
+        public IDictionary<string, byte[]> Files { get; set; }
     }
 }
